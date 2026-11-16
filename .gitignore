@@ -1,0 +1,4 @@
+dist/
+.privado.txt
+node_modules/
+__pycache__/

@@ -1,0 +1,14 @@
+{
+  "raiz": "src",
+  "base": "trinquete.base.json",
+  "incluir": [".ts", ".tsx", ".js", ".jsx", ".vue", ".css"],
+  "excluir": ["node_modules", "dist", "build", ".test.", "__tests__"],
+  "reglas": [
+    { "id": "color-fijo-hex", "patron": "\\[#[0-9a-fA-F]{3,8}\\]|(?:className|style|class)[^\\n]*#[0-9a-fA-F]{3,8}\\b", "porque": "Usar un token del tema, no un color suelto" },
+    { "id": "color-fijo-rgb", "patron": "\\brgba?\\(", "porque": "Usar un token del tema" },
+    { "id": "fondo-blanco-fijo", "patron": "\\bbg-white\\b", "porque": "Usar el token de fondo del tema" },
+    { "id": "gris-de-paleta", "patron": "\\b(?:text|bg|border)-(?:gray|slate)-\\d{2,3}\\b", "porque": "Usar el token de texto o borde del tema" },
+    { "id": "alto-de-pantalla-fijo", "patron": "calc\\(100vh\\s*-\\s*\\d+px\\)", "porque": "El alto sale del diseño (flex o grid), no de una resta a mano" },
+    { "id": "permiso-por-rol-fijo", "patron": "role\\s*===?\\s*['\"][A-Z_]+['\"]", "porque": "El permiso se consulta por clave configurable, no por el nombre del rol base" }
+  ]
+}

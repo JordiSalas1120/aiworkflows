@@ -1,0 +1,69 @@
+# PLANTILLA de aiWorkflows (método 28.2). Copiala a .github/workflows/ci.yml y ajustá los comandos.
+# Regla: el último paso de "verificar" corre EL MISMO comando que `ramas.mjs subir --test` (aiw.config.json → "test").
+name: ci
+
+on:
+  push:
+    branches-ignore: [main]          # main sólo recibe merges de PR (ya verificados)
+  pull_request:
+    branches: [develop, main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true           # un push nuevo cancela el CI viejo de la misma rama
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:                      # quitá este bloque si el proyecto no usa base
+        image: postgres:16
+        env: { POSTGRES_PASSWORD: ci, POSTGRES_DB: app_test }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:ci@localhost:5432/app_test
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }     # gitleaks necesita la historia
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc, cache: npm }
+      - run: npm ci                                  # 1. instalar con el lockfile
+      - run: npm run lint                            # 2. formato y lint
+      - run: npm run typecheck                       # 3. tipos
+      - run: npm run test:ci                         # 4. la suite: el mismo comando que la puerta de push
+      - run: npm run build                           # 5. build, una sola vez
+      - run: npm audit --audit-level=high            # 6a. dependencias
+      - uses: gitleaks/gitleaks-action@v2            # 6b. secretos
+        env: { GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
+      - uses: actions/upload-artifact@v4
+        with: { name: build, path: dist/, retention-days: 7 }
+
+  humo-e2e:                          # 7. pocos caminos críticos contra el build
+    needs: verificar
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc, cache: npm }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e:humo
+
+  desplegar-dev:                     # CD a dev: sólo al mergear a develop
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    needs: [verificar, humo-e2e]
+    runs-on: ubuntu-latest
+    environment: dev                 # secretos del entorno dev (nunca los de prod)
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./scripts/desplegar.sh dev "${GITHUB_SHA}"
+
+# Producción va en otro workflow (deploy-prod.yml), disparado por un tag v*.*.* sobre main,
+# con `environment: production` y revisores obligatorios en la configuración del repo.

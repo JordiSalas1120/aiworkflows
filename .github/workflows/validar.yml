@@ -1,0 +1,43 @@
+name: validar
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Paquete (frontmatter, scripts que compilan, sin mojibake ni rutas personales)
+        run: node herramientas/empaquetar.mjs --validar
+      - name: Instalador en una casa vacía
+        run: |
+          export HOME="$(mktemp -d)"
+          node aiworkflows/instalar.mjs
+          test -f "$HOME/.claude/skills/aiworkflows/SKILL.md"
+          test -f "$HOME/.claude/agents/aiw-implementador.md"
+      - name: ramas.mjs de punta a punta (nueva, puerta, subir, bitácora)
+        run: |
+          set -e
+          R="$PWD/aiworkflows/scripts/ramas.mjs"
+          T="$(mktemp -d)"; cd "$T"
+          git config --global user.email ci@ejemplo.com; git config --global user.name ci; git config --global init.defaultBranch main
+          git init -q --bare remoto.git; git init -q repo; cd repo
+          echo hola > a.txt; git add .; git commit -qm init; git remote add origin ../remoto.git; git push -q origin main
+          git switch -qc develop; git push -q origin develop
+          node "$R" nueva feat/ABC-1-prueba --que "Prueba del CI"
+          if node "$R" subir --test "exit 1"; then echo "debió frenar con la suite en rojo"; exit 1; fi
+          node "$R" subir --test "true"
+          git ls-remote ../remoto.git | grep -q "refs/heads/feat/ABC-1-prueba"
+          node "$R" bitacora | grep -q "ABC-1"
+      - name: Guardia de git
+        run: |
+          G="$PWD/aiworkflows/scripts/guardia-de-modelos.mjs"
+          echo '{"tool_name":"Bash","tool_input":{"command":"git push origin main"}}' | AIWORKFLOWS_RECURSOS=0 node "$G" | grep -q deny
+          ! (echo '{"tool_name":"Bash","tool_input":{"command":"git push -u origin feat/ABC-1-x"}}' | AIWORKFLOWS_RECURSOS=0 node "$G" | grep -q deny)
