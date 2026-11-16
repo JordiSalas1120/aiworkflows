@@ -68,7 +68,8 @@ if (soloValidar) process.exit(0);
 fs.mkdirSync(DIST, { recursive: true });
 const zip = path.join(DIST, `aiworkflows-v${version}.zip`);
 fs.rmSync(zip, { force: true });
-let r = spawnSync('tar', ['-a', '-c', '-f', zip, 'aiworkflows'], { cwd: RAIZ, encoding: 'utf8' }); // bsdtar: Windows 10+ y macOS
+const TAR = process.platform === 'win32' ? path.join(process.env.SystemRoot || 'C:\Windows', 'System32', 'tar.exe') : 'tar'; // en Git Bash, `tar` es GNU y no hace zip
+let r = spawnSync(TAR, ['-a', '-c', '-f', zip, 'aiworkflows'], { cwd: RAIZ, encoding: 'utf8' }); // bsdtar: Windows 10+ y macOS
 if (r.status !== 0 || !fs.existsSync(zip)) r = spawnSync('zip', ['-qr', zip, 'aiworkflows'], { cwd: RAIZ, encoding: 'utf8' }); // Linux
 if (r.status !== 0 || !fs.existsSync(zip)) { console.error(`✘ no se pudo crear el zip: ${r.stderr || r.error}`); process.exit(1); }
 const sha = createHash('sha256').update(fs.readFileSync(zip)).digest('hex');
