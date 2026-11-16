@@ -1,4 +1,4 @@
-﻿# aiWorkflows - instalador de una linea (Windows PowerShell):
+# aiWorkflows - instalador de una linea (Windows PowerShell):
 #   irm https://raw.githubusercontent.com/JordiSalas1120/aiworkflows/main/install.ps1 | iex
 # Opciones:  $env:AIWORKFLOWS_DIR = '<carpeta>' (por defecto ~\.claude-skills)  -  $env:AIWORKFLOWS_GUARDIA = '1' (instala el hook)
 # (Este archivo es ASCII a proposito: asi `irm | iex` funciona igual en Windows PowerShell 5.1 y en PowerShell 7.)
